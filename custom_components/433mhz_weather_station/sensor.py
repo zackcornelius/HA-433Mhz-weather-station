@@ -88,7 +88,7 @@ class WeatherStationSensor(SensorEntity):
         entry: ConfigEntry,
         description: SensorEntityDescription,
     ) -> None:
-        """Initialise the sensor."""
+        """Initialize the sensor."""
         self.entity_description = description
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"

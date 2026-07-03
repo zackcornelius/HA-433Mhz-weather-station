@@ -49,7 +49,7 @@ class RFDecoder:
     """Decodes raw RF pulse data from ESPHome remote_receiver."""
 
     def __init__(self, protocol: str = PROTOCOL_AUTO, threshold: int = PULSE_THRESHOLD_US) -> None:
-        """Initialise the decoder with the selected protocol."""
+        """Initialize the decoder with the selected protocol."""
         self.protocol = protocol
         self.threshold = threshold
 
@@ -233,7 +233,7 @@ class RFDecoder:
     @staticmethod
     def _fineoffset_sanity(temperature_c: float, humidity: int) -> bool:
         """Return True when the decoded values are physically plausible."""
-        return -40.0 <= temperature_c <= 60.0 and 0 < humidity < 100
+        return -40.0 <= temperature_c <= 60.0 and 0 < humidity <= 100
 
     # ------------------------------------------------------------------
     # Protocol: Nexus / Rubicson / Prologue / Digoo
@@ -270,7 +270,7 @@ class RFDecoder:
 
             if not (-40.0 <= temperature_c <= 60.0):
                 continue
-            if humidity is not None and not (0 < humidity < 100):
+            if humidity is not None and not (0 < humidity <= 100):
                 continue
 
             return DecodedData(

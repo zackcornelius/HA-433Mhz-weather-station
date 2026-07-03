@@ -64,7 +64,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options for the 433MHz Weather Station integration."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialise the options flow."""
+        """Initialize the options flow."""
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
