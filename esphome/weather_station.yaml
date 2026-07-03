@@ -1,0 +1,60 @@
+esphome:
+  name: weather-station
+  friendly_name: Weather Station RF Receiver
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: INFO
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Weather Station Fallback"
+    password: !secret ap_password
+
+mqtt:
+  broker: !secret mqtt_broker
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+  port: 1883
+
+# ─── RF Receiver (CC1101 via SPI or direct OOK antenna) ──────────────────────
+# Adjust the GPIO pin to match your wiring.
+# For a direct antenna connection, pin 14 is a common choice.
+# For CC1101, use the GDO2 pin wired to an ESP32 GPIO.
+remote_receiver:
+  pin:
+    number: GPIO14
+    inverted: false   # set to true if your module outputs an inverted signal
+  dump: raw           # log all received signals to the console
+  tolerance: 25%      # timing tolerance for pulse matching
+
+  # When a raw signal is received, publish the pulse data to MQTT so the
+  # Home Assistant 433MHz Weather Station integration can decode it.
+  on_raw:
+    then:
+      - lambda: |-
+          // Build a comma-separated string of pulse timings (µs).
+          // Positive values = mark (carrier on), negative = space (carrier off).
+          std::string payload;
+          payload.reserve(x.size() * 7);
+          for (size_t i = 0; i < x.size(); i++) {
+            if (i > 0) payload += ',';
+            payload += std::to_string(x[i]);
+          }
+          id(mqtt_client).publish("esphome/weather_station/raw", payload);

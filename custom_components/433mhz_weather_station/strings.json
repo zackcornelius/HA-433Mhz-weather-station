@@ -1,0 +1,32 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This MQTT topic is already configured.",
+      "mqtt_not_available": "MQTT integration is not available. Please configure MQTT first."
+    },
+    "error": {
+      "invalid_topic": "MQTT topic cannot be empty."
+    },
+    "step": {
+      "user": {
+        "data": {
+          "mqtt_topic": "MQTT Topic",
+          "protocol": "RF Protocol"
+        },
+        "description": "Configure the MQTT topic where your ESPHome device publishes raw 433MHz pulse data, and select the RF protocol used by your weather station.",
+        "title": "433MHz Weather Station"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "mqtt_topic": "MQTT Topic",
+          "protocol": "RF Protocol"
+        },
+        "title": "Update 433MHz Weather Station Settings"
+      }
+    }
+  }
+}
