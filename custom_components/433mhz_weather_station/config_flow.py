@@ -4,85 +4,110 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
-from homeassistant.components import mqtt
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
-    CONF_MQTT_TOPIC,
-    CONF_PROTOCOL,
-    DEFAULT_MQTT_TOPIC,
-    DEFAULT_PROTOCOL,
+    CONF_AVAILABLE_FIELDS,
+    CONF_ENTRY_TYPE,
+    CONF_ESPHOME_DEVICE_ID,
+    CONF_MODEL,
+    CONF_PROTOCOL_DESC,
+    CONF_SENSOR_ID,
     DOMAIN,
-    PROTOCOLS,
+    ENTRY_TYPE_HUB,
+    ENTRY_TYPE_SENSOR,
 )
+
+_HUB_UNIQUE_ID = "rtl433_hub"
 
 
 class WeatherStationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for 433MHz Weather Station."""
 
-    VERSION = 1
+    VERSION = 2
+
+    def __init__(self) -> None:
+        """Initialize the flow."""
+        self._discovery_data: dict = {}
+
+    # ------------------------------------------------------------------
+    # Manual setup – creates the hub entry that keeps the domain loaded
+    # ------------------------------------------------------------------
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
-        """Handle the initial step."""
-        errors: dict[str, str] = {}
-
-        if not await mqtt.async_wait_for_mqtt_client(self.hass):
-            return self.async_abort(reason="mqtt_not_available")
+        """Handle initial setup by the user."""
+        await self.async_set_unique_id(_HUB_UNIQUE_ID)
+        self._abort_if_unique_id_configured()
 
         if user_input is not None:
-            topic = user_input[CONF_MQTT_TOPIC].strip()
-            if not topic:
-                errors[CONF_MQTT_TOPIC] = "invalid_topic"
-            else:
-                await self.async_set_unique_id(topic)
-                self._abort_if_unique_id_configured()
-                return self.async_create_entry(
-                    title=f"433MHz Station ({topic})",
-                    data=user_input,
-                )
+            return self.async_create_entry(
+                title="RTL_433 RF Listener",
+                data={CONF_ENTRY_TYPE: ENTRY_TYPE_HUB},
+            )
+
+        return self.async_show_form(step_id="user")
+
+    # ------------------------------------------------------------------
+    # Discovery – fired by __init__.py when a new (model, id) is seen
+    # ------------------------------------------------------------------
+
+    async def async_step_integration_discovery(
+        self, discovery_info: dict
+    ) -> FlowResult:
+        """Handle a newly discovered RF sensor."""
+        model: str = discovery_info[CONF_MODEL]
+        sensor_id = discovery_info[CONF_SENSOR_ID]
+
+        unique_id = f"{model}_{sensor_id}"
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured()
+
+        self._discovery_data = discovery_info
+        self.context["title_placeholders"] = {
+            "model": model,
+            "sensor_id": str(sensor_id),
+        }
+
+        return await self.async_step_confirm_discovery()
+
+    async def async_step_confirm_discovery(
+        self, user_input: dict | None = None
+    ) -> FlowResult:
+        """Ask the user to confirm (and optionally rename) a discovered sensor."""
+        model: str = self._discovery_data[CONF_MODEL]
+        sensor_id = self._discovery_data[CONF_SENSOR_ID]
+        default_name = f"{model} #{sensor_id}"
+
+        if user_input is not None:
+            name: str = user_input.get("name", default_name).strip() or default_name
+            return self.async_create_entry(
+                title=name,
+                data={
+                    CONF_ENTRY_TYPE: ENTRY_TYPE_SENSOR,
+                    CONF_MODEL: model,
+                    CONF_SENSOR_ID: sensor_id,
+                    CONF_ESPHOME_DEVICE_ID: self._discovery_data.get(
+                        CONF_ESPHOME_DEVICE_ID, ""
+                    ),
+                    CONF_PROTOCOL_DESC: self._discovery_data.get(
+                        CONF_PROTOCOL_DESC, ""
+                    ),
+                    CONF_AVAILABLE_FIELDS: self._discovery_data.get(
+                        CONF_AVAILABLE_FIELDS, []
+                    ),
+                },
+            )
 
         schema = vol.Schema(
-            {
-                vol.Required(CONF_MQTT_TOPIC, default=DEFAULT_MQTT_TOPIC): str,
-                vol.Required(CONF_PROTOCOL, default=DEFAULT_PROTOCOL): vol.In(PROTOCOLS),
-            }
+            {vol.Optional("name", default=default_name): str}
         )
 
         return self.async_show_form(
-            step_id="user",
+            step_id="confirm_discovery",
             data_schema=schema,
-            errors=errors,
+            description_placeholders={
+                "model": model,
+                "sensor_id": str(sensor_id),
+                "protocol": self._discovery_data.get(CONF_PROTOCOL_DESC, ""),
+            },
         )
-
-    @staticmethod
-    def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> OptionsFlowHandler:
-        """Return the options flow handler."""
-        return OptionsFlowHandler(config_entry)
-
-
-class OptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle options for the 433MHz Weather Station integration."""
-
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Initialize the options flow."""
-        self.config_entry = config_entry
-
-    async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
-        """Handle options."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
-
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_MQTT_TOPIC,
-                    default=self.config_entry.data.get(CONF_MQTT_TOPIC, DEFAULT_MQTT_TOPIC),
-                ): str,
-                vol.Required(
-                    CONF_PROTOCOL,
-                    default=self.config_entry.data.get(CONF_PROTOCOL, DEFAULT_PROTOCOL),
-                ): vol.In(PROTOCOLS),
-            }
-        )
-
-        return self.async_show_form(step_id="init", data_schema=schema)

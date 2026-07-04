@@ -1,31 +1,20 @@
 {
   "config": {
     "abort": {
-      "already_configured": "This MQTT topic is already configured.",
-      "mqtt_not_available": "MQTT integration is not available. Please configure MQTT first."
-    },
-    "error": {
-      "invalid_topic": "MQTT topic cannot be empty."
+      "already_configured": "This RF listener is already configured.",
+      "already_in_progress": "Discovery of this sensor is already in progress."
     },
     "step": {
       "user": {
+        "title": "433MHz Weather Station – RTL_433",
+        "description": "Activate the RF listener. Once enabled, any 433 MHz sensor decoded by RTL_433 on your ESPHome device will be discovered automatically and offered for setup here."
+      },
+      "confirm_discovery": {
+        "title": "New RF Sensor Discovered",
+        "description": "A new RF sensor has been received:\n\n**Model:** {model}\n**Sensor ID:** {sensor_id}\n**Protocol:** {protocol}\n\nGive it a name and click Submit to add it.",
         "data": {
-          "mqtt_topic": "MQTT Topic",
-          "protocol": "RF Protocol"
-        },
-        "description": "Configure the MQTT topic where your ESPHome device publishes raw 433MHz pulse data, and select the RF protocol used by your weather station.",
-        "title": "433MHz Weather Station"
-      }
-    }
-  },
-  "options": {
-    "step": {
-      "init": {
-        "data": {
-          "mqtt_topic": "MQTT Topic",
-          "protocol": "RF Protocol"
-        },
-        "title": "Update 433MHz Weather Station Settings"
+          "name": "Device name"
+        }
       }
     }
   }

@@ -11,7 +11,7 @@ esp32:
 logger:
   level: INFO
 
-# Enable Home Assistant API
+# Enable Home Assistant API (required so ESPHome can fire HA events)
 api:
   encryption:
     key: !secret api_encryption_key
@@ -27,34 +27,25 @@ wifi:
     ssid: "Weather Station Fallback"
     password: !secret ap_password
 
-mqtt:
-  broker: !secret mqtt_broker
-  username: !secret mqtt_username
-  password: !secret mqtt_password
-  port: 1883
+# ─── RTL_433 decoder via external component ──────────────────────────────────
+# This component listens on the CC1101 radio, decodes received 433 MHz messages
+# using the RTL_433 protocol library, and fires an esphome.rf_message_received
+# event on the Home Assistant event bus for each decoded packet.
+#
+# Source: https://github.com/NorthernMan54/esphome-rtl_433
+external_components:
+  - source: github://NorthernMan54/esphome-rtl_433
 
-# ─── RF Receiver (CC1101 via SPI or direct OOK antenna) ──────────────────────
-# Adjust the GPIO pin to match your wiring.
-# For a direct antenna connection, pin 14 is a common choice.
-# For CC1101, use the GDO2 pin wired to an ESP32 GPIO.
-remote_receiver:
-  pin:
-    number: GPIO14
-    inverted: false   # set to true if your module outputs an inverted signal
-  dump: raw           # log all received signals to the console
-  tolerance: 25%      # timing tolerance for pulse matching
+rtl_433:
+  frequency: 433920000   # standard 433.92 MHz band
 
-  # When a raw signal is received, publish the pulse data to MQTT so the
-  # Home Assistant 433MHz Weather Station integration can decode it.
-  on_raw:
-    then:
-      - lambda: |-
-          // Build a comma-separated string of pulse timings (µs).
-          // Positive values = mark (carrier on), negative = space (carrier off).
-          std::string payload;
-          payload.reserve(x.size() * 7);
-          for (size_t i = 0; i < x.size(); i++) {
-            if (i > 0) payload += ',';
-            payload += std::to_string(x[i]);
-          }
-          id(mqtt_client).publish("esphome/weather_station/raw", payload);
+# ─── CC1101 transceiver (SPI) ────────────────────────────────────────────────
+# Adjust the pin numbers to match your ESP32 ↔ CC1101 wiring.
+# A typical ESP32 dev-board wiring is shown below.
+cc1101:
+  mosi_pin: GPIO23
+  miso_pin: GPIO19
+  sck_pin:  GPIO18
+  cs_pin:   GPIO5
+  gdo0_pin: GPIO21
+  gdo2_pin: GPIO22
